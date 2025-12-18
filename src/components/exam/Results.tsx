@@ -1,8 +1,9 @@
 import React from 'react';
 import { questions } from '@/data/questions';
-import { CheckCircle, XCircle, Trophy, BarChart3 } from 'lucide-react';
+import { CheckCircle, XCircle, Trophy, BarChart3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { jsPDF } from 'jspdf';
 
 interface ResultsProps {
   answers: Record<number, number>;
@@ -30,6 +31,71 @@ export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
 
   const { correct, incorrect, unattempted } = calculateScore();
   const percentage = Math.round((correct / questions.length) * 100);
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Exam Results / परीक्षा परिणाम', pageWidth / 2, y, { align: 'center' });
+    y += 15;
+
+    // Score Summary
+    doc.setFontSize(14);
+    doc.text(`Score: ${correct}/${questions.length} (${percentage}%)`, margin, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.text(`Correct: ${correct} | Incorrect: ${incorrect} | Unattempted: ${unattempted}`, margin, y);
+    y += 15;
+
+    // Questions
+    doc.setFontSize(10);
+    questions.forEach((q, index) => {
+      const userAnswer = answers[index];
+      const isCorrect = userAnswer !== undefined && userAnswer + 1 === q.correctOption;
+      const isUnattempted = userAnswer === undefined;
+
+      // Check if we need a new page
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Question number and status
+      doc.setFont('helvetica', 'bold');
+      const status = isUnattempted ? '[Skipped]' : isCorrect ? '[Correct]' : '[Wrong]';
+      doc.text(`Q${q.id}. ${status}`, margin, y);
+      y += 5;
+
+      // Question text (truncated if too long)
+      doc.setFont('helvetica', 'normal');
+      const questionText = q.questionEn.length > 80 ? q.questionEn.substring(0, 80) + '...' : q.questionEn;
+      doc.text(questionText, margin, y);
+      y += 5;
+
+      // Options on same line
+      const optionLabels = ['A', 'B', 'C', 'D'];
+      let optionsText = '';
+      q.options.en.forEach((opt, i) => {
+        const shortOpt = opt.length > 12 ? opt.substring(0, 12) + '..' : opt;
+        optionsText += `${optionLabels[i]}) ${shortOpt}  `;
+      });
+      doc.text(optionsText, margin, y);
+      y += 5;
+
+      // User answer and correct answer
+      const userAnsText = isUnattempted ? 'Not answered' : optionLabels[userAnswer];
+      const correctAnsText = optionLabels[q.correctOption - 1];
+      doc.text(`Your Answer: ${userAnsText} | Correct: ${correctAnsText}`, margin, y);
+      y += 10;
+    });
+
+    doc.save('exam-results.pdf');
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -67,9 +133,15 @@ export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
             </div>
           </div>
 
-          <Button onClick={onRestart} size="lg" className="mt-4">
-            Try Again / फिर से प्रयास करें
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={downloadPDF} variant="outline" size="lg" className="gap-2">
+              <Download className="w-4 h-4" />
+              Download PDF
+            </Button>
+            <Button onClick={onRestart} size="lg">
+              Try Again / फिर से प्रयास करें
+            </Button>
+          </div>
         </Card>
 
         {/* Detailed Answers */}

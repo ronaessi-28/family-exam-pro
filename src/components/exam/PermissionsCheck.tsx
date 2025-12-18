@@ -5,9 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PermissionsCheckProps {
   onPermissionsGranted: (stream: MediaStream) => void;
+  attemptsRemaining?: number;
+  maxAttempts?: number;
 }
 
-export const PermissionsCheck: React.FC<PermissionsCheckProps> = ({ onPermissionsGranted }) => {
+export const PermissionsCheck: React.FC<PermissionsCheckProps> = ({ 
+  onPermissionsGranted,
+  attemptsRemaining = 3,
+  maxAttempts = 3
+}) => {
   const [cameraStatus, setCameraStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [micStatus, setMicStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [isChecking, setIsChecking] = useState(false);
@@ -26,7 +32,6 @@ export const PermissionsCheck: React.FC<PermissionsCheckProps> = ({ onPermission
       setCameraStatus('granted');
       setMicStatus('granted');
       
-      // Small delay for UX
       setTimeout(() => {
         onPermissionsGranted(stream);
       }, 500);
@@ -60,6 +65,9 @@ export const PermissionsCheck: React.FC<PermissionsCheckProps> = ({ onPermission
             Exam Proctoring Setup
             <span className="block text-lg text-muted-foreground mt-1">परीक्षा प्रॉक्टरिंग सेटअप</span>
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Attempts remaining today: <span className="font-bold text-primary">{attemptsRemaining}/{maxAttempts}</span>
+          </p>
         </CardHeader>
         
         <CardContent className="space-y-6">
