@@ -11,6 +11,10 @@ interface ResultsProps {
 }
 
 export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
+  const MARKS_PER_CORRECT = 1;
+  const MARKS_PER_WRONG = -0.25;
+  const MARKS_PER_UNATTEMPTED = -0.95;
+
   const calculateScore = () => {
     let correct = 0;
     let incorrect = 0;
@@ -26,11 +30,14 @@ export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
       }
     });
 
-    return { correct, incorrect, unattempted };
+    const totalMarks = (correct * MARKS_PER_CORRECT) + (incorrect * MARKS_PER_WRONG) + (unattempted * MARKS_PER_UNATTEMPTED);
+    const maxMarks = questions.length * MARKS_PER_CORRECT;
+
+    return { correct, incorrect, unattempted, totalMarks, maxMarks };
   };
 
-  const { correct, incorrect, unattempted } = calculateScore();
-  const percentage = Math.round((correct / questions.length) * 100);
+  const { correct, incorrect, unattempted, totalMarks, maxMarks } = calculateScore();
+  const percentage = Math.round((Math.max(0, totalMarks) / maxMarks) * 100);
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -46,11 +53,14 @@ export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
 
     // Score Summary
     doc.setFontSize(14);
-    doc.text(`Score: ${correct}/${questions.length} (${percentage}%)`, margin, y);
+    doc.text(`Score: ${totalMarks.toFixed(2)} / ${maxMarks} (${percentage}%)`, margin, y);
     y += 8;
     doc.setFontSize(11);
-    doc.text(`Correct: ${correct} | Incorrect: ${incorrect} | Unattempted: ${unattempted}`, margin, y);
-    y += 15;
+    doc.text(`Correct: ${correct} (+${correct * MARKS_PER_CORRECT}) | Wrong: ${incorrect} (${(incorrect * MARKS_PER_WRONG).toFixed(2)}) | Unattempted: ${unattempted} (${(unattempted * MARKS_PER_UNATTEMPTED).toFixed(2)})`, margin, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.text(`Marking: Correct +1, Wrong -0.25, Unattempted -0.95`, margin, y);
+    y += 12;
 
     // Questions
     doc.setFontSize(10);
@@ -111,24 +121,31 @@ export const Results: React.FC<ResultsProps> = ({ answers, onRestart }) => {
             <p className="text-muted-foreground mt-2">Here's your performance summary</p>
           </div>
 
-          <div className="text-6xl font-bold text-primary">
-            {percentage}%
+          <div className="text-5xl font-bold text-primary">
+            {totalMarks.toFixed(2)} / {maxMarks}
           </div>
+          <p className="text-lg text-muted-foreground">{percentage}%</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Marking: Correct +1 | Wrong -0.25 | Unattempted -0.95
+          </p>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-success/10">
               <CheckCircle className="w-8 h-8 text-success mx-auto mb-2" />
               <p className="text-2xl font-bold text-success">{correct}</p>
+              <p className="text-xs text-success">+{correct * MARKS_PER_CORRECT}</p>
               <p className="text-sm text-muted-foreground">Correct / सही</p>
             </div>
             <div className="p-4 rounded-xl bg-destructive/10">
               <XCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
               <p className="text-2xl font-bold text-destructive">{incorrect}</p>
-              <p className="text-sm text-muted-foreground">Incorrect / गलत</p>
+              <p className="text-xs text-destructive">{(incorrect * MARKS_PER_WRONG).toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">Wrong / गलत</p>
             </div>
-            <div className="p-4 rounded-xl bg-muted">
-              <BarChart3 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-2xl font-bold">{unattempted}</p>
+            <div className="p-4 rounded-xl bg-warning/10">
+              <BarChart3 className="w-8 h-8 text-warning mx-auto mb-2" />
+              <p className="text-2xl font-bold text-warning">{unattempted}</p>
+              <p className="text-xs text-warning">{(unattempted * MARKS_PER_UNATTEMPTED).toFixed(2)}</p>
               <p className="text-sm text-muted-foreground">Skipped / छोड़े</p>
             </div>
           </div>
