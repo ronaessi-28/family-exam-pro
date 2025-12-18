@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { questions } from '@/data/questions';
 import { useExamState } from '@/hooks/useExamState';
 import { useProctoring } from '@/hooks/useProctoring';
+import { useAttemptLimit } from '@/hooks/useAttemptLimit';
 import { PermissionsCheck } from '@/components/exam/PermissionsCheck';
 import { CameraPreview } from '@/components/exam/CameraPreview';
 import { Timer } from '@/components/exam/Timer';
@@ -11,7 +12,8 @@ import { ViolationWarning } from '@/components/exam/ViolationWarning';
 import { SubmitConfirmDialog } from '@/components/exam/SubmitConfirmDialog';
 import { Results } from '@/components/exam/Results';
 import { Button } from '@/components/ui/button';
-import { Send, Menu, X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Send, Menu, X, AlertTriangle } from 'lucide-react';
 
 const ExamInterface: React.FC = () => {
   const [examStarted, setExamStarted] = useState(false);
@@ -19,6 +21,8 @@ const ExamInterface: React.FC = () => {
   const [showViolation, setShowViolation] = useState<string | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
+
+  const { attemptsRemaining, canAttempt, recordAttempt, maxAttempts } = useAttemptLimit();
 
   const {
     state,
@@ -51,6 +55,7 @@ const ExamInterface: React.FC = () => {
 
   const handlePermissionsGranted = (stream: MediaStream) => {
     setMediaStream(stream);
+    recordAttempt();
     requestFullscreen();
     setExamStarted(true);
   };
@@ -59,8 +64,37 @@ const ExamInterface: React.FC = () => {
     window.location.reload();
   };
 
+  // Show attempt limit reached screen
+  if (!canAttempt && !examStarted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-8 text-center space-y-6">
+          <div className="mx-auto w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Daily Limit Reached</h1>
+            <h2 className="text-lg text-muted-foreground">दैनिक सीमा समाप्त</h2>
+          </div>
+          <p className="text-muted-foreground">
+            You have used all {maxAttempts} attempts for today. Please come back tomorrow to try again.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            आपने आज के सभी {maxAttempts} प्रयास उपयोग कर लिए हैं। कृपया कल फिर से प्रयास करें।
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   if (!examStarted) {
-    return <PermissionsCheck onPermissionsGranted={handlePermissionsGranted} />;
+    return (
+      <PermissionsCheck 
+        onPermissionsGranted={handlePermissionsGranted} 
+        attemptsRemaining={attemptsRemaining}
+        maxAttempts={maxAttempts}
+      />
+    );
   }
 
   if (state.isSubmitted) {
@@ -83,7 +117,7 @@ const ExamInterface: React.FC = () => {
           >
             {showMobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          <h1 className="text-lg font-bold hidden sm:block">HSSC Mock Test</h1>
+          <h1 className="text-lg font-bold hidden sm:block">Math Mock Test</h1>
         </div>
 
         <div className="flex items-center gap-3">
